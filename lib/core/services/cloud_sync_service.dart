@@ -164,19 +164,28 @@ class CloudSyncService {
           List<Map<String, dynamic>>.from(data['products'] ?? []);
       final settingsData =
           Map<String, dynamic>.from(data['settings'] ?? {});
-      final batchCount = (data['txBatchCount'] as int?) ?? 0;
 
       // ── Read all transaction batches ────────────────────────────────────────
       final rawTx = <Map<String, dynamic>>[];
       final rawLi = <Map<String, dynamic>>[];
 
-      for (int i = 0; i < batchCount; i++) {
-        final batchDoc =
-            await mainRef.collection('tx_batches').doc('$i').get();
-        if (batchDoc.exists && batchDoc.data() != null) {
-          final bd = batchDoc.data()!;
-          rawTx.addAll(List<Map<String, dynamic>>.from(bd['transactions'] ?? []));
-          rawLi.addAll(List<Map<String, dynamic>>.from(bd['lineItems'] ?? []));
+      // 1. Check if transactions/lineItems exist directly in main document (legacy/root backups)
+      if (data['transactions'] != null) {
+        rawTx.addAll(List<Map<String, dynamic>>.from(data['transactions']));
+      }
+      if (data['lineItems'] != null) {
+        rawLi.addAll(List<Map<String, dynamic>>.from(data['lineItems']));
+      }
+
+      // 2. Fetch all tx_batches subcollection documents
+      final batchDocs = await mainRef.collection('tx_batches').get();
+      for (final bDoc in batchDocs.docs) {
+        final bd = bDoc.data();
+        if (bd['transactions'] != null) {
+          rawTx.addAll(List<Map<String, dynamic>>.from(bd['transactions']));
+        }
+        if (bd['lineItems'] != null) {
+          rawLi.addAll(List<Map<String, dynamic>>.from(bd['lineItems']));
         }
       }
 
@@ -342,13 +351,20 @@ class CloudSyncService {
 
   static Map<String, dynamic> _normalizeTransaction(Map<String, dynamic> row) {
     final res = <String, dynamic>{};
-    if (row['id'] != null) res['id'] = row['id'];
-    res['total_amount'] = row['total_amount'] ?? row['totalAmount'] ?? 0.0;
-    res['cash_tendered'] = row['cash_tendered'] ?? row['cashTendered'] ?? 0.0;
-    res['change_given'] = row['change_given'] ?? row['changeGiven'] ?? 0.0;
-    res['global_discount'] = row['global_discount'] ?? row['globalDiscount'] ?? 0.0;
+    if (row['id'] != null) res['id'] = (row['id'] as num).toInt();
+    res['total_amount'] = (row['total_amount'] ?? row['totalAmount'] ?? 0.0) as num;
+    res['cash_tendered'] = (row['cash_tendered'] ?? row['cashTendered'] ?? 0.0) as num;
+    res['change_given'] = (row['change_given'] ?? row['changeGiven'] ?? 0.0) as num;
+    res['global_discount'] = (row['global_discount'] ?? row['globalDiscount'] ?? 0.0) as num;
     res['status'] = row['status'] ?? 'COMPLETED';
-    res['created_at'] = row['created_at'] ?? row['createdAt'] ?? DateTime.now().toIso8601String();
+
+    final rawDate = row['created_at'] ?? row['createdAt'];
+    if (rawDate != null) {
+      final str = rawDate.toString();
+      res['created_at'] = str.replaceAll('T', ' ').split('.').first;
+    } else {
+      res['created_at'] = DateTime.now().toString().split('.').first;
+    }
     return res;
   }
 
