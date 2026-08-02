@@ -29,9 +29,10 @@ dependencies:
   # Icons (Material included by default)
   cupertino_icons: ^1.0.8
 
-  # Receipt Scanner & Product Images
+  # Receipt & Barcode Scanner
   image_picker: ^1.1.2
   google_mlkit_text_recognition: ^0.13.1
+  mobile_scanner: ^6.0.4
 
   # Notifications
   flutter_local_notifications: ^17.2.4

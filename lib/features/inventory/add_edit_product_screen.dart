@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'inventory_provider.dart';
 import 'product_catalog_screen.dart';
+import '../scanner/barcode_scanner_dialog.dart';
 import '../../core/models/product.dart';
 
 /// Form screen for adding or editing a product.
@@ -24,6 +25,7 @@ class _AddEditProductScreenState
     extends ConsumerState<AddEditProductScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
+  late TextEditingController _skuController;
   late TextEditingController _costPriceController;
   late TextEditingController _sellingPriceController;
   late TextEditingController _stockController;
@@ -52,6 +54,7 @@ class _AddEditProductScreenState
     final stub = widget.catalogStub;
 
     _nameController = TextEditingController(text: p?.productName ?? stub?.productName ?? '');
+    _skuController = TextEditingController(text: p?.sku ?? stub?.sku ?? '');
     _costPriceController =
         TextEditingController(text: p != null && p.costPrice > 0 ? p.costPrice.toStringAsFixed(2) : '');
     _sellingPriceController =
@@ -216,6 +219,7 @@ class _AddEditProductScreenState
     final product = Product(
       id: widget.existingProduct?.id,
       productName: _nameController.text.trim(),
+      sku: _skuController.text.trim().isEmpty ? null : _skuController.text.trim(),
       categoryId: _selectedCategoryId,
       costPrice: cost,
       sellingPrice: sell,
@@ -454,6 +458,40 @@ class _AddEditProductScreenState
                 error: (_, __) => const SizedBox.shrink(),
               ),
               const SizedBox(height: 16),
+
+              // Barcode / SKU Input
+              const _FormLabel('Barcode / SKU (Optional)'),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _skuController,
+                      decoration: const InputDecoration(
+                        hintText: 'e.g. 4800361000011',
+                        prefixIcon: Icon(Icons.qr_code),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.filled(
+                    onPressed: () async {
+                      final scanned = await showBarcodeScannerDialog(context);
+                      if (scanned != null && scanned.isNotEmpty) {
+                        setState(() => _skuController.text = scanned);
+                      }
+                    },
+                    icon: const Icon(Icons.qr_code_scanner_rounded),
+                    tooltip: 'Scan Barcode',
+                    style: IconButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      padding: const EdgeInsets.all(12),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
 
               // --- PACK / WHOLESALE COST CALCULATOR CARD ---
               Card(

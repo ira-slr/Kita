@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'pos_provider.dart';
 import '../inventory/inventory_provider.dart';
 import '../inventory/quick_restock_sheet.dart';
+import '../scanner/barcode_scanner_dialog.dart';
 import '../settings/settings_provider.dart';
 import '../../core/models/product.dart';
 import '../../core/utils/formatters.dart';
@@ -19,32 +20,103 @@ class _PosScreenState extends ConsumerState<PosScreen> {
   String _searchQuery = '';
   String? _selectedCategory;
 
+  Future<void> _scanBarcode(List<Product> products, String symbol) async {
+    final scannedCode = await showBarcodeScannerDialog(context);
+    if (scannedCode == null || scannedCode.isEmpty) return;
+
+    // Look up product by SKU / barcode
+    final matched = products.where((p) => p.sku == scannedCode).firstOrNull;
+
+    if (!mounted) return;
+
+    if (matched != null) {
+      if (matched.isOutOfStock) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${matched.productName} is OUT OF STOCK!'),
+            backgroundColor: Colors.red.shade800,
+            action: SnackBarAction(
+              label: 'RESTOCK',
+              textColor: Colors.white,
+              onPressed: () => showQuickRestockSheet(context, ref, matched, symbol: symbol),
+            ),
+          ),
+        );
+      } else {
+        final added = ref.read(cartProvider.notifier).addProduct(matched);
+        if (added) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Added 1x ${matched.productName}!'),
+              backgroundColor: Colors.green.shade800,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } else {
+      // Product not found in inventory
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No product found with barcode "$scannedCode"'),
+          backgroundColor: Colors.orange.shade800,
+          action: SnackBarAction(
+            label: 'ADD TO CATALOG',
+            textColor: Colors.white,
+            onPressed: () => Navigator.of(context).pushNamed(
+              '/inventory/add',
+              arguments: scannedCode,
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final cart = ref.watch(cartProvider);
     final inventoryAsync = ref.watch(inventoryProvider);
+    final cart = ref.watch(cartProvider);
     final settings = ref.watch(settingsProvider);
     final symbol = settings.currencySymbol;
+    final products = inventoryAsync.value ?? [];
 
     return Column(
       children: [
-        // Search bar
+        // Search bar + Barcode Scanner Camera button
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-          child: TextField(
-            decoration: InputDecoration(
-              hintText: 'Search products...',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () =>
-                          setState(() => _searchQuery = ''),
-                    )
-                  : null,
-            ),
-            onChanged: (v) =>
-                setState(() => _searchQuery = v.toLowerCase()),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Search products...',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () =>
+                                setState(() => _searchQuery = ''),
+                          )
+                        : null,
+                  ),
+                  onChanged: (v) =>
+                      setState(() => _searchQuery = v.toLowerCase()),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Barcode Camera Button
+              IconButton.filled(
+                onPressed: () => _scanBarcode(products, symbol),
+                icon: const Icon(Icons.qr_code_scanner_rounded),
+                tooltip: 'Scan Barcode',
+                style: IconButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  padding: const EdgeInsets.all(12),
+                ),
+              ),
+            ],
           ),
         ),
 
