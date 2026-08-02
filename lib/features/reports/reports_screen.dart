@@ -93,30 +93,58 @@ class _OverviewTab extends ConsumerWidget {
     final period = ref.watch(reportPeriodProvider);
     final reportAsync = ref.watch(reportDataProvider);
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(0, 12, 0, 24),
-      children: [
-        // Time filter chips
-        SizedBox(
-          height: 44,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(reportDataProvider);
+        ref.invalidate(recentTransactionsProvider);
+        ref.invalidate(inventoryProvider);
+        ref.invalidate(todaySalesProvider);
+        ref.invalidate(todayProfitProvider);
+      },
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(0, 12, 0, 24),
+        children: [
+          // Time filter chips & Refresh button
+          Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: ReportPeriod.values.map((p) {
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ChoiceChip(
-                  label: Text(_periodLabel(p)),
-                  selected: period == p,
-                  onSelected: (_) =>
-                      ref.read(reportPeriodProvider.notifier).state = p,
+            child: Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 44,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: ReportPeriod.values.map((p) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            label: Text(_periodLabel(p)),
+                            selected: period == p,
+                            onSelected: (_) =>
+                                ref.read(reportPeriodProvider.notifier).state = p,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
                 ),
-              );
-            }).toList(),
+                const SizedBox(width: 6),
+                IconButton.filledTonal(
+                  onPressed: () {
+                    ref.invalidate(reportDataProvider);
+                    ref.invalidate(recentTransactionsProvider);
+                    ref.invalidate(inventoryProvider);
+                    ref.invalidate(todaySalesProvider);
+                    ref.invalidate(todayProfitProvider);
+                  },
+                  icon: const Icon(Icons.refresh_rounded),
+                  tooltip: 'Refresh Financial Overview',
+                ),
+              ],
+            ),
           ),
-        ),
 
-        const SizedBox(height: 12),
+          const SizedBox(height: 12),
 
         reportAsync.when(
           data: (data) => Column(
@@ -240,7 +268,8 @@ class _OverviewTab extends ConsumerWidget {
           error: (e, _) => Center(child: Text('Error: $e')),
         ),
       ],
-    );
+    ),
+  );
   }
 
   String _periodLabel(ReportPeriod p) {
