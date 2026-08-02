@@ -78,8 +78,10 @@ class SariSmartApp extends ConsumerWidget {
           case '/inventory/add':
           case '/inventory/edit':
           case '/inventory/detail':
-            final product = routeSettings.arguments as Product?;
+            final args = routeSettings.arguments;
+            final product = args is Product ? args : null;
             return MaterialPageRoute(
+              settings: routeSettings,
               builder: (_) =>
                   AddEditProductScreen(existingProduct: product),
             );
