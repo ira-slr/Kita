@@ -48,7 +48,10 @@ class _AddEditProductScreenState
   bool _isSearchingBarcode = false;
   String? _barcodeNotice;
 
-  bool get isEditing => widget.existingProduct != null;
+  Product? _detectedExistingProduct;
+
+  bool get isEditing => widget.existingProduct != null || _detectedExistingProduct != null;
+  Product? get activeProduct => widget.existingProduct ?? _detectedExistingProduct;
 
   @override
   void initState() {
@@ -127,6 +130,7 @@ class _AddEditProductScreenState
       _isSearchingBarcode = false;
       if (result.source == 'existing' && result.existingProduct != null) {
         final ep = result.existingProduct!;
+        _detectedExistingProduct = ep;
         _nameController.text = ep.productName;
         _costPriceController.text = ep.costPrice > 0 ? ep.costPrice.toStringAsFixed(2) : '';
         _sellingPriceController.text = ep.sellingPrice > 0 ? ep.sellingPrice.toStringAsFixed(2) : '';
@@ -134,7 +138,7 @@ class _AddEditProductScreenState
         _selectedCategoryId = ep.categoryId;
         _imagePath = ep.imagePath;
 
-        _barcodeNotice = '⚠️ Barcode belongs to existing product "${ep.productName}". Loaded existing product details.';
+        _barcodeNotice = '⚠️ Barcode belongs to existing product "${ep.productName}". Switched to Edit mode.';
       } else if (result.isFound) {
         if (_nameController.text.trim().isEmpty) {
           _nameController.text = result.productName;
@@ -287,7 +291,7 @@ class _AddEditProductScreenState
     final bPrice = _enableBundlePricing ? (double.tryParse(_bundlePriceController.text) ?? 0) : 0.0;
 
     final product = Product(
-      id: widget.existingProduct?.id,
+      id: activeProduct?.id,
       productName: _nameController.text.trim(),
       sku: _skuController.text.trim().isEmpty ? null : _skuController.text.trim(),
       categoryId: _selectedCategoryId,
@@ -333,8 +337,16 @@ class _AddEditProductScreenState
                 onPressed: () => Navigator.pop(ctx, 'edit'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
-                child: Text('Edit "${duplicate.productName}"'),
+                child: Text(
+                  'Edit "${duplicate.productName}"',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
