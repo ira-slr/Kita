@@ -6,6 +6,7 @@ import 'inventory_provider.dart';
 import 'product_catalog_screen.dart';
 import '../scanner/barcode_scanner_dialog.dart';
 import '../../core/models/product.dart';
+import '../../core/services/barcode_lookup_service.dart';
 
 /// Form screen for adding or editing a product.
 /// [catalogStub] is optionally provided when navigating from the product catalog
@@ -43,6 +44,9 @@ class _AddEditProductScreenState
 
   int? _selectedCategoryId;
   String? _imagePath;
+
+  bool _isSearchingBarcode = false;
+  String? _barcodeNotice;
 
   bool get isEditing => widget.existingProduct != null;
 
@@ -89,6 +93,62 @@ class _AddEditProductScreenState
         }
       });
     }
+  }
+
+  bool _didCheckInitialBarcode = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_didCheckInitialBarcode) {
+      _didCheckInitialBarcode = true;
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is String && args.isNotEmpty) {
+        _skuController.text = args;
+        _performBarcodeLookup(args);
+      }
+    }
+  }
+
+  Future<void> _performBarcodeLookup(String code) async {
+    if (code.trim().isEmpty) return;
+
+    setState(() {
+      _isSearchingBarcode = true;
+      _barcodeNotice = null;
+    });
+
+    final categories = ref.read(categoriesProvider).value ?? [];
+    final result = await BarcodeLookupService.lookup(code);
+
+    if (!mounted) return;
+
+    setState(() {
+      _isSearchingBarcode = false;
+      if (result.isFound) {
+        if (_nameController.text.trim().isEmpty) {
+          _nameController.text = result.productName;
+        }
+
+        if (result.categoryName != null) {
+          final matchedCat = categories
+              .where((c) =>
+                  c.name.toLowerCase() == result.categoryName!.toLowerCase() ||
+                  c.name.toLowerCase().contains(result.categoryName!.toLowerCase()))
+              .firstOrNull;
+          if (matchedCat != null) {
+            _selectedCategoryId = matchedCat.id;
+          }
+        }
+
+        _barcodeNotice = result.source == 'online'
+            ? '🌐 Product details auto-filled via online database!'
+            : '⚡ Product details found in local catalog!';
+      } else {
+        _barcodeNotice =
+            'ℹ️ Barcode not in local catalog. Connect to Internet for automatic online product lookup.';
+      }
+    });
   }
 
   @override
@@ -467,10 +527,21 @@ class _AddEditProductScreenState
                   Expanded(
                     child: TextFormField(
                       controller: _skuController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: 'e.g. 4800361000011',
-                        prefixIcon: Icon(Icons.qr_code),
+                        prefixIcon: const Icon(Icons.qr_code),
+                        suffixIcon: _isSearchingBarcode
+                            ? const Padding(
+                                padding: EdgeInsets.all(12),
+                                child: SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              )
+                            : null,
                       ),
+                      onFieldSubmitted: (val) => _performBarcodeLookup(val),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -479,6 +550,7 @@ class _AddEditProductScreenState
                       final scanned = await showBarcodeScannerDialog(context);
                       if (scanned != null && scanned.isNotEmpty) {
                         setState(() => _skuController.text = scanned);
+                        _performBarcodeLookup(scanned);
                       }
                     },
                     icon: const Icon(Icons.qr_code_scanner_rounded),
@@ -490,6 +562,33 @@ class _AddEditProductScreenState
                   ),
                 ],
               ),
+              if (_barcodeNotice != null) ...[
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _barcodeNotice!.contains('🌐') || _barcodeNotice!.contains('⚡')
+                        ? Colors.green.shade50
+                        : Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: _barcodeNotice!.contains('🌐') || _barcodeNotice!.contains('⚡')
+                          ? Colors.green.shade200
+                          : Colors.orange.shade300,
+                    ),
+                  ),
+                  child: Text(
+                    _barcodeNotice!,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: _barcodeNotice!.contains('🌐') || _barcodeNotice!.contains('⚡')
+                          ? Colors.green.shade900
+                          : Colors.orange.shade900,
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
 
 
