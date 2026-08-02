@@ -159,7 +159,6 @@ class CloudSyncService {
           List<Map<String, dynamic>>.from(data['products'] ?? []);
       final settingsData =
           Map<String, dynamic>.from(data['settings'] ?? {});
-      final batchCount = (data['txBatchCount'] as int?) ?? 0;
 
       // ── Read all transaction batches ────────────────────────────────────────
       final rawTx = <Map<String, dynamic>>[];
