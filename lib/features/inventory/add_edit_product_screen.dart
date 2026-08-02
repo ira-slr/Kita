@@ -436,20 +436,25 @@ class _AddEditProductScreenState
               const _FormLabel('Category'),
               const SizedBox(height: 4),
               categoriesAsync.when(
-                data: (categories) => DropdownButtonFormField<int>(
-                  initialValue: _selectedCategoryId,
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.category_outlined),
-                  ),
-                  items: categories
-                      .map((c) => DropdownMenuItem(
-                            value: c.id,
-                            child: Text(c.name),
-                          ))
-                      .toList(),
-                  onChanged: (v) =>
-                      setState(() => _selectedCategoryId = v),
-                ),
+                data: (categories) {
+                  final validCategory = categories.any((c) => c.id == _selectedCategoryId)
+                      ? _selectedCategoryId
+                      : null;
+                  return DropdownButtonFormField<int>(
+                    value: validCategory,
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.category_outlined),
+                    ),
+                    items: categories
+                        .map((c) => DropdownMenuItem<int>(
+                              value: c.id,
+                              child: Text(c.name),
+                            ))
+                        .toList(),
+                    onChanged: (v) =>
+                        setState(() => _selectedCategoryId = v),
+                  );
+                },
                 loading: () => const LinearProgressIndicator(),
                 error: (_, __) => const SizedBox.shrink(),
               ),
