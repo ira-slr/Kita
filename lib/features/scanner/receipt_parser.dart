@@ -1,5 +1,6 @@
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import '../../core/models/product.dart';
+import '../../core/data/ph_product_catalog.dart';
 import 'scanned_item_model.dart';
 
 /// Pure-Dart & ML Kit spatial receipt parser.
@@ -153,7 +154,6 @@ class ReceiptParser {
       final qVal = double.tryParse(qtyMatch.group(1)!);
       if (qVal != null && qVal > 0 && qVal <= 500) {
         qty = qVal;
-        // Strip leading qty from workLine
         workLine = workLine.substring(qtyMatch.end).trim();
       }
     }
@@ -165,7 +165,6 @@ class ReceiptParser {
       if (uVal != null && uVal > 0) {
         unitCost = uVal;
       }
-      // Strip @unit price from workLine
       workLine = workLine.replaceAll(_atUnitPricePattern, '').trim();
     }
 
@@ -190,7 +189,6 @@ class ReceiptParser {
       }
     }
 
-    // If no total cost price was found, this line is not a product item
     if (totalCost == null && unitCost == null) return null;
 
     if (totalCost == null && unitCost != null) {
@@ -199,7 +197,6 @@ class ReceiptParser {
       unitCost = qty > 0 ? totalCost / qty : totalCost;
     }
 
-    // Ignore non-product prices (too cheap under 0.50 or huge numbers > 100k)
     if (totalCost! < 0.50 || totalCost > 100000) return null;
 
     // --- STEP 4: Clean Product Description ---
@@ -207,19 +204,19 @@ class ReceiptParser {
     if (name.length < 2) return null;
     if (_isNoise(name.toLowerCase())) return null;
 
-    // Format concatenated words (e.g. "FemmeTsu2Ply250" -> "Femme Tsu 2Ply 250")
     name = _formatProductName(name);
 
-    // --- STEP 5: Fuzzy Matching against Existing Products ---
+    // --- STEP 5: Fuzzy Matching against Existing Products & Philippine Catalog ---
     int? matchedId;
     String? matchedName;
     MatchConfidence confidence = MatchConfidence.none;
 
+    final normalizedInput = _normalizeAbbreviations(name.toLowerCase());
+
+    // 5a. Match against existing inventory products first
     if (products.isNotEmpty) {
       double bestScore = 0;
       Product? bestMatch;
-
-      final normalizedInput = _normalizeAbbreviations(name.toLowerCase());
 
       for (final p in products) {
         final normalizedProduct =
@@ -232,15 +229,35 @@ class ReceiptParser {
       }
 
       if (bestMatch != null) {
-        if (bestScore >= 0.75) {
+        if (bestScore >= 0.65) {
           confidence = MatchConfidence.high;
           matchedId = bestMatch.id;
           matchedName = bestMatch.productName;
-        } else if (bestScore >= 0.45) {
+        } else if (bestScore >= 0.40) {
           confidence = MatchConfidence.low;
           matchedId = bestMatch.id;
           matchedName = bestMatch.productName;
         }
+      }
+    }
+
+    // 5b. Fallback match against Philippine catalog if no inventory match
+    if (matchedName == null) {
+      double bestCatScore = 0;
+      PhProduct? bestCatMatch;
+
+      for (final catProd in PhProductCatalog.products) {
+        final normalizedCat = _normalizeAbbreviations(catProd.name.toLowerCase());
+        final score = similarity(normalizedInput, normalizedCat);
+        if (score > bestCatScore) {
+          bestCatScore = score;
+          bestCatMatch = catProd;
+        }
+      }
+
+      if (bestCatMatch != null && bestCatScore >= 0.55) {
+        confidence = MatchConfidence.low;
+        matchedName = bestCatMatch.name;
       }
     }
 
