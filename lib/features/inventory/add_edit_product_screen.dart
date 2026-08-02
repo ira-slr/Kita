@@ -125,7 +125,17 @@ class _AddEditProductScreenState
 
     setState(() {
       _isSearchingBarcode = false;
-      if (result.isFound) {
+      if (result.source == 'existing' && result.existingProduct != null) {
+        final ep = result.existingProduct!;
+        _nameController.text = ep.productName;
+        _costPriceController.text = ep.costPrice > 0 ? ep.costPrice.toStringAsFixed(2) : '';
+        _sellingPriceController.text = ep.sellingPrice > 0 ? ep.sellingPrice.toStringAsFixed(2) : '';
+        _stockController.text = ep.currentStock.toInt().toString();
+        _selectedCategoryId = ep.categoryId;
+        _imagePath = ep.imagePath;
+
+        _barcodeNotice = '⚠️ Barcode belongs to existing product "${ep.productName}". Loaded existing product details.';
+      } else if (result.isFound) {
         if (_nameController.text.trim().isEmpty) {
           _nameController.text = result.productName;
         }
@@ -292,6 +302,54 @@ class _AddEditProductScreenState
 
     try {
       final notifier = ref.read(inventoryProvider.notifier);
+
+      final duplicate = await notifier.checkDuplicateProduct(
+        sku: product.sku,
+        name: product.productName,
+        excludeId: product.id,
+      );
+
+      if (duplicate != null) {
+        if (!mounted) return;
+
+        final isSkuDup = product.sku != null && duplicate.sku == product.sku;
+        final title = isSkuDup ? 'Duplicate Barcode Found' : 'Duplicate Product Name';
+        final detail = isSkuDup
+            ? 'Barcode "${product.sku}" is already assigned to "${duplicate.productName}".'
+            : 'A product named "${duplicate.productName}" already exists in your inventory.';
+
+        final action = await showDialog<String>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            icon: const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 44),
+            title: Text(title),
+            content: Text('$detail\n\nWould you like to edit the existing product instead?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, 'cancel'),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, 'edit'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                ),
+                child: Text('Edit "${duplicate.productName}"'),
+              ),
+            ],
+          ),
+        );
+
+        if (action == 'edit' && mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => AddEditProductScreen(existingProduct: duplicate),
+            ),
+          );
+        }
+        return;
+      }
+
       if (isEditing) {
         await notifier.updateProduct(product);
       } else {

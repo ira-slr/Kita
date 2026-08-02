@@ -1,25 +1,30 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../data/ph_product_catalog.dart';
+import '../database/database_helper.dart';
+import '../database/database_constants.dart';
+import '../models/product.dart';
 
 /// Result from barcode lookup service
 class BarcodeLookupResult {
   final String productName;
   final String? categoryName;
-  final String source; // 'local', 'online', 'none'
+  final String source; // 'existing', 'local', 'online', 'none'
   final String? message;
+  final Product? existingProduct;
 
   const BarcodeLookupResult({
     required this.productName,
     this.categoryName,
     required this.source,
     this.message,
+    this.existingProduct,
   });
 
   bool get isFound => productName.isNotEmpty;
 }
 
-/// Hybrid Barcode Lookup Service (Offline Local Catalog + Online Open Food Facts API)
+/// Hybrid Barcode Lookup Service (Existing Store Inventory + Offline Local Catalog + Online Open Food Facts API)
 class BarcodeLookupService {
   /// Looks up product details by barcode (EAN-13, UPC, etc.)
   static Future<BarcodeLookupResult> lookup(String barcode) async {
@@ -31,6 +36,28 @@ class BarcodeLookupService {
         message: 'Empty barcode.',
       );
     }
+
+    // --- STEP 0: Check Active Store Inventory (Existing Product) ---
+    try {
+      final db = await DatabaseHelper().database;
+      final existing = await db.query(
+        DbConstants.tableInventory,
+        where: '${DbConstants.colSku} = ? AND ${DbConstants.colIsArchived} = 0',
+        whereArgs: [cleanCode],
+      );
+
+      if (existing.isNotEmpty) {
+        final pMap = existing.first;
+        final existingProduct = Product.fromMap(pMap);
+        return BarcodeLookupResult(
+          productName: existingProduct.productName,
+          categoryName: null,
+          source: 'existing',
+          existingProduct: existingProduct,
+          message: 'Product already in your inventory: "${existingProduct.productName}"',
+        );
+      }
+    } catch (_) {}
 
     // --- STEP 1: Offline Local Philippine Product Catalog Lookup ---
     for (final p in PhProductCatalog.products) {

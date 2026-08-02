@@ -78,6 +78,55 @@ class InventoryNotifier extends StateNotifier<AsyncValue<List<Product>>> {
     await loadProducts();
   }
 
+  /// Checks if a product with the same SKU or Name already exists in active inventory.
+  Future<Product?> checkDuplicateProduct({
+    String? sku,
+    String? name,
+    int? excludeId,
+  }) async {
+    final db = await DatabaseHelper().database;
+    final cleanSku = sku?.trim();
+    final cleanName = name?.trim().toLowerCase();
+
+    final whereClause = StringBuffer('${DbConstants.colIsArchived} = 0 AND (');
+    final args = <dynamic>[];
+
+    var addedOr = false;
+    if (cleanSku != null && cleanSku.isNotEmpty) {
+      whereClause.write('${DbConstants.colSku} = ?');
+      args.add(cleanSku);
+      addedOr = true;
+    }
+
+    if (cleanName != null && cleanName.isNotEmpty) {
+      if (addedOr) whereClause.write(' OR ');
+      whereClause.write('LOWER(${DbConstants.colProductName}) = ?');
+      args.add(cleanName);
+      addedOr = true;
+    }
+
+    whereClause.write(')');
+
+    if (!addedOr) return null;
+
+    if (excludeId != null) {
+      whereClause.write(' AND ${DbConstants.colId} != ?');
+      args.add(excludeId);
+    }
+
+    final res = await db.query(
+      DbConstants.tableInventory,
+      where: whereClause.toString(),
+      whereArgs: args,
+      limit: 1,
+    );
+
+    if (res.isNotEmpty) {
+      return Product.fromMap(res.first);
+    }
+    return null;
+  }
+
   Future<void> adjustStock(int productId, double adjustment) async {
     final db = await DatabaseHelper().database;
     await db.rawUpdate('''
