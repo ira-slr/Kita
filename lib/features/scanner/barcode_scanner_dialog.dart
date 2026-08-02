@@ -26,13 +26,12 @@ class _BarcodeScannerSheet extends StatefulWidget {
 class _BarcodeScannerSheetState extends State<_BarcodeScannerSheet> {
   late MobileScannerController _controller;
   bool _hasScanned = false;
-  bool _canScan = false;
 
   @override
   void initState() {
     super.initState();
     _controller = MobileScannerController(
-      detectionSpeed: DetectionSpeed.noDuplicates,
+      detectionSpeed: DetectionSpeed.unrestricted,
       formats: const [
         BarcodeFormat.ean13,
         BarcodeFormat.ean8,
@@ -43,13 +42,6 @@ class _BarcodeScannerSheetState extends State<_BarcodeScannerSheet> {
         BarcodeFormat.qrCode,
       ],
     );
-
-    // Give 500ms warm-up delay when camera sheet opens to prevent accidental instant scans
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) {
-        setState(() => _canScan = true);
-      }
-    });
   }
 
   @override
@@ -59,7 +51,7 @@ class _BarcodeScannerSheetState extends State<_BarcodeScannerSheet> {
   }
 
   void _onDetect(BarcodeCapture capture) {
-    if (_hasScanned || !_canScan) return;
+    if (_hasScanned) return;
 
     for (final barcode in capture.barcodes) {
       final code = barcode.rawValue?.trim();
@@ -131,7 +123,7 @@ class _BarcodeScannerSheetState extends State<_BarcodeScannerSheet> {
                 height: scanWindowHeight,
                 decoration: BoxDecoration(
                   border: Border.all(
-                    color: _canScan ? Colors.tealAccent : Colors.white38,
+                    color: Colors.tealAccent,
                     width: 3,
                   ),
                   borderRadius: BorderRadius.circular(16),
