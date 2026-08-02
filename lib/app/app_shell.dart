@@ -6,6 +6,7 @@ import '../features/inventory/product_catalog_screen.dart';
 import '../features/pos/pos_screen.dart';
 import '../features/reports/reports_screen.dart';
 import '../features/scanner/scanner_screen.dart';
+import '../features/scanner/barcode_scanner_dialog.dart';
 import '../features/settings/settings_provider.dart';
 
 /// The main app shell with bottom navigation and FAB.
@@ -80,6 +81,22 @@ class _AppShellState extends ConsumerState<AppShell>
       children: [
         // Mini FABs (only when expanded)
         if (_fabExpanded) ...[
+          _MiniFabOption(
+            icon: Icons.qr_code_scanner_rounded,
+            label: 'Scan Barcode',
+            color: Colors.purple.shade700,
+            onTap: () async {
+              _collapseFab();
+              final code = await showBarcodeScannerDialog(context);
+              if (code != null && code.isNotEmpty && context.mounted) {
+                Navigator.of(context).pushNamed(
+                  '/inventory/add',
+                  arguments: code,
+                );
+              }
+            },
+          ),
+          const SizedBox(height: 12),
           _MiniFabOption(
             icon: Icons.document_scanner_rounded,
             label: 'Scan Receipt',
