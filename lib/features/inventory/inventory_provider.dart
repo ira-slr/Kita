@@ -28,16 +28,45 @@ class InventoryNotifier extends StateNotifier<AsyncValue<List<Product>>> {
     try {
       final db = await DatabaseHelper().database;
 
-      // Self-healing repair: if any product category_id does not exist in categories table,
-      // re-assign it to the first valid category so it never shows as Uncategorized or crashes!
-      await db.rawUpdate('''
-        UPDATE ${DbConstants.tableInventory}
-        SET ${DbConstants.colCategoryId} = (
-          SELECT ${DbConstants.colId} FROM ${DbConstants.tableCategories} LIMIT 1
-        )
-        WHERE ${DbConstants.colCategoryId} IS NOT NULL
-          AND ${DbConstants.colCategoryId} NOT IN (SELECT ${DbConstants.colId} FROM ${DbConstants.tableCategories})
-      ''');
+      // Self-healing repair: if any product has null or invalid category_id,
+      // deduce its proper category based on product name keywords!
+      final allCats = await db.query(DbConstants.tableCategories);
+      if (allCats.isNotEmpty) {
+        final orphans = await db.rawQuery('''
+          SELECT id, product_name FROM ${DbConstants.tableInventory}
+          WHERE category_id IS NULL
+             OR category_id NOT IN (SELECT id FROM ${DbConstants.tableCategories})
+        ''');
+
+        for (final orphan in orphans) {
+          final pId = orphan['id'] as int;
+          final pName = (orphan['product_name'] as String? ?? '').toLowerCase();
+
+          int? targetCatId;
+          if (pName.contains('marlboro') || pName.contains('camel') || pName.contains('sig') || pName.contains('fortune') || pName.contains('winston')) {
+            targetCatId = allCats.where((c) => (c['name'] as String).toLowerCase().contains('tobacco')).firstOrNull?['id'] as int?;
+          } else if (pName.contains('sarap') || pName.contains('knorr') || pName.contains('ajinomoto') || pName.contains('toyo') || pName.contains('patis') || pName.contains('suka') || pName.contains('salt')) {
+            targetCatId = allCats.where((c) => (c['name'] as String).toLowerCase().contains('condiment')).firstOrNull?['id'] as int?;
+          } else if (pName.contains('coffee') || pName.contains('nescaf') || pName.contains('kopiko') || pName.contains('great taste') || pName.contains('c2') || pName.contains('coke') || pName.contains('sprite') || pName.contains('royal') || pName.contains('milo') || pName.contains('water') || pName.contains('tea')) {
+            targetCatId = allCats.where((c) => (c['name'] as String).toLowerCase().contains('beverage')).firstOrNull?['id'] as int?;
+          } else if (pName.contains('lucky me') || pName.contains('pancit') || pName.contains('canton') || pName.contains('sardine') || pName.contains('555') || pName.contains('san jose') || pName.contains('corned beef') || pName.contains('meat') || pName.contains('tuna')) {
+            targetCatId = allCats.where((c) => (c['name'] as String).toLowerCase().contains('canned')).firstOrNull?['id'] as int?;
+          } else if (pName.contains('piattos') || pName.contains('nova') || pName.contains('ding dong') || pName.contains('boy bawang') || pName.contains('chip') || pName.contains('biscuit')) {
+            targetCatId = allCats.where((c) => (c['name'] as String).toLowerCase().contains('snack')).firstOrNull?['id'] as int?;
+          } else if (pName.contains('rice') || pName.contains('bigas')) {
+            targetCatId = allCats.where((c) => (c['name'] as String).toLowerCase().contains('rice')).firstOrNull?['id'] as int?;
+          }
+
+          targetCatId ??= (allCats.where((c) => (c['name'] as String).toLowerCase() == 'others').firstOrNull ?? allCats.first)['id'] as int;
+
+          await db.update(
+            DbConstants.tableInventory,
+            {'category_id': targetCatId},
+            where: 'id = ?',
+            whereArgs: [pId],
+          );
+        }
+      }
 
       final result = await db.rawQuery('''
         SELECT i.*, c.${DbConstants.colName} as category_name,
