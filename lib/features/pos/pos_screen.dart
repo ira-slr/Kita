@@ -323,12 +323,15 @@ class _ProductTile extends StatelessWidget {
             ],
           ),
           child: Stack(
+            alignment: Alignment.center,
             children: [
-              Padding(
-                padding: const EdgeInsets.all(6),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
+              SizedBox.expand(
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
                     Icon(
                       Icons.inventory_2,
                       size: 28,
@@ -377,6 +380,7 @@ class _ProductTile extends StatelessWidget {
                   ],
                 ),
               ),
+            ),
 
               // Bundle promo badge (top-left)
               if (product.hasBundle && !isOutOfStock)
