@@ -27,6 +27,18 @@ class InventoryNotifier extends StateNotifier<AsyncValue<List<Product>>> {
     state = const AsyncValue.loading();
     try {
       final db = await DatabaseHelper().database;
+
+      // Self-healing repair: if any product category_id does not exist in categories table,
+      // re-assign it to the first valid category so it never shows as Uncategorized or crashes!
+      await db.rawUpdate('''
+        UPDATE ${DbConstants.tableInventory}
+        SET ${DbConstants.colCategoryId} = (
+          SELECT ${DbConstants.colId} FROM ${DbConstants.tableCategories} LIMIT 1
+        )
+        WHERE ${DbConstants.colCategoryId} IS NOT NULL
+          AND ${DbConstants.colCategoryId} NOT IN (SELECT ${DbConstants.colId} FROM ${DbConstants.tableCategories})
+      ''');
+
       final result = await db.rawQuery('''
         SELECT i.*, c.${DbConstants.colName} as category_name,
                c.${DbConstants.colColorHex} as category_color_hex

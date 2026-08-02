@@ -55,10 +55,15 @@ class CloudSyncService {
     try {
       final db = await DatabaseHelper().database;
 
-      // Read every table
+      // Read every table (join category_name so restore can map by name if IDs differ)
       final categories = await db.query(DbConstants.tableCategories);
       final suppliers = await db.query(DbConstants.tableSuppliers);
-      final products = await db.query(DbConstants.tableInventory);
+      final products = await db.rawQuery('''
+        SELECT i.*, c.${DbConstants.colName} as category_name
+        FROM ${DbConstants.tableInventory} i
+        LEFT JOIN ${DbConstants.tableCategories} c
+          ON i.${DbConstants.colCategoryId} = c.${DbConstants.colId}
+      ''');
       final transactions = await db.query(
           DbConstants.tableTransactions,
           orderBy: '${DbConstants.colId} ASC');
@@ -199,6 +204,16 @@ class CloudSyncService {
             );
           }
 
+          // Build category lookup maps for smart product category mapping
+          final currentCategories = await txn.query(DbConstants.tableCategories);
+          final catIdSet = currentCategories.map((c) => (c['id'] as num).toInt()).toSet();
+          final catNameToId = <String, int>{};
+          for (final c in currentCategories) {
+            final id = (c['id'] as num).toInt();
+            final name = (c['name'] as String).toLowerCase().trim();
+            catNameToId[name] = id;
+          }
+
           // Restore suppliers
           for (final raw in rawSuppliers) {
             final row = _cleanMap(raw);
@@ -209,9 +224,22 @@ class CloudSyncService {
             );
           }
 
-          // Restore products
+          // Restore products with smart category ID resolution
           for (final raw in rawProducts) {
             final row = _normalizeProduct(raw);
+            var catId = (row['category_id'] as num?)?.toInt();
+
+            // If category_id is missing or doesn't match any restored category ID, try matching by category_name!
+            if (catId == null || !catIdSet.contains(catId)) {
+              final catName = (raw['category_name'] ?? raw['categoryName'] ?? '').toString().toLowerCase().trim();
+              if (catName.isNotEmpty && catNameToId.containsKey(catName)) {
+                catId = catNameToId[catName];
+              } else if (currentCategories.isNotEmpty) {
+                catId = (currentCategories.first['id'] as num).toInt();
+              }
+            }
+            row['category_id'] = catId;
+
             await txn.insert(
               DbConstants.tableInventory,
               row,
