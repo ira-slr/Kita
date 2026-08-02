@@ -1,0 +1,51 @@
+name: sari_sari_pos
+description: "SariSmart: An Offline-First AI-Powered POS and Inventory Management System for Sari-Sari Stores."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Database
+  sqflite: ^2.4.2
+  path: ^1.9.1
+
+  # State Management
+  flutter_riverpod: ^2.6.1
+
+  # Local Storage (for onboarding flags, simple prefs)
+  shared_preferences: ^2.5.3
+  path_provider: ^2.1.6
+
+  # UI & Formatting
+  google_fonts: ^6.2.1
+  intl: ^0.20.2
+  fl_chart: ^0.70.2
+
+  # Icons (Material included by default)
+  cupertino_icons: ^1.0.8
+
+  # Receipt Scanner & Product Images
+  image_picker: ^1.1.2
+  google_mlkit_text_recognition: ^0.13.1
+
+  # Notifications
+  flutter_local_notifications: ^17.2.4
+
+  # Cloud Backup (Firebase Free Tier)
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.4
+  google_sign_in: ^6.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
