@@ -26,6 +26,7 @@ class _BarcodeScannerSheet extends StatefulWidget {
 class _BarcodeScannerSheetState extends State<_BarcodeScannerSheet> {
   late MobileScannerController _controller;
   bool _hasScanned = false;
+  bool _canScan = false;
 
   @override
   void initState() {
@@ -42,6 +43,13 @@ class _BarcodeScannerSheetState extends State<_BarcodeScannerSheet> {
         BarcodeFormat.qrCode,
       ],
     );
+
+    // Give 500ms warm-up delay when camera sheet opens to prevent accidental instant scans
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        setState(() => _canScan = true);
+      }
+    });
   }
 
   @override
@@ -51,7 +59,7 @@ class _BarcodeScannerSheetState extends State<_BarcodeScannerSheet> {
   }
 
   void _onDetect(BarcodeCapture capture) {
-    if (_hasScanned) return;
+    if (_hasScanned || !_canScan) return;
 
     for (final barcode in capture.barcodes) {
       final code = barcode.rawValue?.trim();
@@ -66,7 +74,15 @@ class _BarcodeScannerSheetState extends State<_BarcodeScannerSheet> {
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
-    final scanWindowSize = media.size.width * 0.75;
+    final scanWindowWidth = media.size.width * 0.75;
+    final scanWindowHeight = scanWindowWidth * 0.6;
+
+    // Define explicit bounding box for scanning window
+    final scanWindow = Rect.fromCenter(
+      center: Offset(media.size.width / 2, (media.size.height - 180) / 2),
+      width: scanWindowWidth,
+      height: scanWindowHeight,
+    );
 
     return Column(
       children: [
@@ -105,15 +121,19 @@ class _BarcodeScannerSheetState extends State<_BarcodeScannerSheet> {
             children: [
               MobileScanner(
                 controller: _controller,
+                scanWindow: scanWindow,
                 onDetect: _onDetect,
               ),
 
               // Scanning Box Guide Overlay
               Container(
-                width: scanWindowSize,
-                height: scanWindowSize * 0.6,
+                width: scanWindowWidth,
+                height: scanWindowHeight,
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.tealAccent, width: 3),
+                  border: Border.all(
+                    color: _canScan ? Colors.tealAccent : Colors.white38,
+                    width: 3,
+                  ),
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
