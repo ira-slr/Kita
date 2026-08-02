@@ -37,23 +37,23 @@ final reportDataProvider = FutureProvider<ReportData>((ref) async {
   String dateFilter;
   switch (period) {
     case ReportPeriod.today:
-      dateFilter = "date(t.${DbConstants.colCreatedAt}) = date('now','localtime')";
+      dateFilter = "date(replace(t.${DbConstants.colCreatedAt}, 'T', ' ')) = date('now','localtime')";
       break;
     case ReportPeriod.yesterday:
       dateFilter =
-          "date(t.${DbConstants.colCreatedAt}) = date('now','localtime','-1 day')";
+          "date(replace(t.${DbConstants.colCreatedAt}, 'T', ' ')) = date('now','localtime','-1 day')";
       break;
     case ReportPeriod.thisWeek:
       dateFilter =
-          "t.${DbConstants.colCreatedAt} >= datetime('now','localtime','weekday 0','-6 days','start of day')";
+          "replace(t.${DbConstants.colCreatedAt}, 'T', ' ') >= datetime('now','localtime','weekday 0','-6 days','start of day')";
       break;
     case ReportPeriod.thisMonth:
       dateFilter =
-          "t.${DbConstants.colCreatedAt} >= datetime('now','localtime','start of month')";
+          "replace(t.${DbConstants.colCreatedAt}, 'T', ' ') >= datetime('now','localtime','start of month')";
       break;
     case ReportPeriod.thisYear:
       dateFilter =
-          "t.${DbConstants.colCreatedAt} >= datetime('now','localtime','start of year')";
+          "replace(t.${DbConstants.colCreatedAt}, 'T', ' ') >= datetime('now','localtime','start of year')";
       break;
   }
 
