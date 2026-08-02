@@ -55,10 +55,15 @@ class CloudSyncService {
     try {
       final db = await DatabaseHelper().database;
 
-      // Read every table
+      // Read every table (join category_name so restore can map by name if IDs differ)
       final categories = await db.query(DbConstants.tableCategories);
       final suppliers = await db.query(DbConstants.tableSuppliers);
-      final products = await db.query(DbConstants.tableInventory);
+      final products = await db.rawQuery('''
+        SELECT i.*, c.${DbConstants.colName} as category_name
+        FROM ${DbConstants.tableInventory} i
+        LEFT JOIN ${DbConstants.tableCategories} c
+          ON i.${DbConstants.colCategoryId} = c.${DbConstants.colId}
+      ''');
       final transactions = await db.query(
           DbConstants.tableTransactions,
           orderBy: '${DbConstants.colId} ASC');
@@ -199,6 +204,16 @@ class CloudSyncService {
             );
           }
 
+          // Build category lookup maps for smart product category mapping
+          final currentCategories = await txn.query(DbConstants.tableCategories);
+          final catIdSet = currentCategories.map((c) => (c['id'] as num).toInt()).toSet();
+          final catNameToId = <String, int>{};
+          for (final c in currentCategories) {
+            final id = (c['id'] as num).toInt();
+            final name = (c['name'] as String).toLowerCase().trim();
+            catNameToId[name] = id;
+          }
+
           // Restore suppliers
           for (final raw in rawSuppliers) {
             final row = _cleanMap(raw);
@@ -209,9 +224,19 @@ class CloudSyncService {
             );
           }
 
-          // Restore products
+          // Restore products with smart category ID resolution
           for (final raw in rawProducts) {
             final row = _normalizeProduct(raw);
+            var catId = (row['category_id'] as num?)?.toInt();
+
+            // If category_id is missing or doesn't match any restored category ID, smartly resolve by product name/keywords!
+            if (catId == null || !catIdSet.contains(catId)) {
+              final prodName = (row['product_name'] ?? raw['productName'] ?? '').toString();
+              final catName = (raw['category_name'] ?? raw['categoryName'] ?? '').toString();
+              catId = _resolveCategoryForProduct(prodName, catName, currentCategories);
+            }
+            row['category_id'] = catId;
+
             await txn.insert(
               DbConstants.tableInventory,
               row,
@@ -337,6 +362,87 @@ class CloudSyncService {
     res['historical_cost_price'] = row['historical_cost_price'] ?? row['historicalCostPrice'] ?? 0.0;
     res['item_discount'] = row['item_discount'] ?? row['itemDiscount'] ?? 0.0;
     return res;
+  }
+
+  static int _resolveCategoryForProduct(
+      String productName, String? rawCatName, List<Map<String, dynamic>> categories) {
+    if (categories.isEmpty) return 1;
+
+    final nameLower = productName.toLowerCase().trim();
+    final rawLower = (rawCatName ?? '').toLowerCase().trim();
+
+    // 1. Match by raw category name
+    if (rawLower.isNotEmpty) {
+      for (final c in categories) {
+        final cName = (c['name'] as String).toLowerCase().trim();
+        if (cName == rawLower || rawLower.contains(cName) || cName.contains(rawLower)) {
+          return (c['id'] as num).toInt();
+        }
+      }
+    }
+
+    // 2. Keyword matching for common Philippine products
+    String? targetCatKey;
+    if (nameLower.contains('marlboro') ||
+        nameLower.contains('camel') ||
+        nameLower.contains('sig') ||
+        nameLower.contains('fortune') ||
+        nameLower.contains('winston')) {
+      targetCatKey = 'tobacco';
+    } else if (nameLower.contains('sarap') ||
+        nameLower.contains('knorr') ||
+        nameLower.contains('ajinomoto') ||
+        nameLower.contains('toyo') ||
+        nameLower.contains('patis') ||
+        nameLower.contains('suka') ||
+        nameLower.contains('salt') ||
+        nameLower.contains('seasoning')) {
+      targetCatKey = 'condiment';
+    } else if (nameLower.contains('coffee') ||
+        nameLower.contains('nescaf') ||
+        nameLower.contains('kopiko') ||
+        nameLower.contains('great taste') ||
+        nameLower.contains('c2') ||
+        nameLower.contains('coke') ||
+        nameLower.contains('sprite') ||
+        nameLower.contains('royal') ||
+        nameLower.contains('milo') ||
+        nameLower.contains('water') ||
+        nameLower.contains('tea')) {
+      targetCatKey = 'beverage';
+    } else if (nameLower.contains('lucky me') ||
+        nameLower.contains('pancit') ||
+        nameLower.contains('canton') ||
+        nameLower.contains('sardine') ||
+        nameLower.contains('555') ||
+        nameLower.contains('san jose') ||
+        nameLower.contains('corned beef') ||
+        nameLower.contains('meat') ||
+        nameLower.contains('tuna')) {
+      targetCatKey = 'canned';
+    } else if (nameLower.contains('piattos') ||
+        nameLower.contains('nova') ||
+        nameLower.contains('ding dong') ||
+        nameLower.contains('boy bawang') ||
+        nameLower.contains('chip') ||
+        nameLower.contains('biscuit')) {
+      targetCatKey = 'snack';
+    } else if (nameLower.contains('rice') || nameLower.contains('bigas')) {
+      targetCatKey = 'rice';
+    }
+
+    if (targetCatKey != null) {
+      for (final c in categories) {
+        final cName = (c['name'] as String).toLowerCase();
+        if (cName.contains(targetCatKey)) {
+          return (c['id'] as num).toInt();
+        }
+      }
+    }
+
+    // 3. Fallback: 'Others' or first category
+    final others = categories.where((c) => (c['name'] as String).toLowerCase() == 'others').firstOrNull;
+    return others != null ? (others['id'] as num).toInt() : (categories.first['id'] as num).toInt();
   }
 
   // ─── Metadata ─────────────────────────────────────────────────────────────
