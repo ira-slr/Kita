@@ -80,7 +80,7 @@ class BarcodeLookupService {
             uri,
             headers: {
               'User-Agent':
-                  'SariSmartPOS/1.0 (Contact: support@sarismart.app)',
+                  'KitaPOS/1.0 (Contact: support@kitapos.app)',
             },
           )
           .timeout(const Duration(seconds: 5));

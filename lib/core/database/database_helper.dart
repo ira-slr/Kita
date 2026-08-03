@@ -13,7 +13,7 @@ class DatabaseHelper {
   DatabaseHelper._internal();
 
   static const int _databaseVersion = 3;
-  static const String _databaseName = 'sarismart.db';
+  static const String _databaseName = 'kita_pos.db';
 
   Future<Database> get database async {
     if (_database != null) return _database!;

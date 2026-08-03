@@ -9,8 +9,8 @@ class NotificationService {
 
   static final _plugin = FlutterLocalNotificationsPlugin();
 
-  static const _channelId = 'sarismart_alerts';
-  static const _channelName = 'SariSmart Alerts';
+  static const _channelId = 'kita_alerts';
+  static const _channelName = 'Kita POS Alerts';
   static const _channelDesc =
       'Low stock warnings, expiration notices, and other store alerts.';
 

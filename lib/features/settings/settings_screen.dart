@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'settings_provider.dart';
 import '../inventory/inventory_provider.dart';
 import '../reports/reports_provider.dart';
-import '../../core/services/cloud_sync_service.dart';
+import '../../core/services/local_backup_service.dart';
+import '../../core/services/csv_export_service.dart';
+import '../../app/theme.dart';
 
-/// Settings screen: store profile, dark mode, PIN, cloud backup.
+/// Settings screen: store profile, dark mode, PIN, local backup & CSV, cloud backup.
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -15,101 +16,90 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  bool _isBacking = false;
-  bool _isRestoring = false;
-  BackupInfo? _backupInfo;
-  User? _currentUser;
+  bool _isLocalActionRunning = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _currentUser = CloudSyncService.currentUser;
-    if (_currentUser != null) _loadBackupInfo();
-  }
+  // ─── Local On-Device Backup & Restore ─────────────────────────────────────
 
-  Future<void> _loadBackupInfo() async {
-    final info = await CloudSyncService.getBackupInfo();
-    if (mounted) setState(() => _backupInfo = info);
-  }
-
-  // ─── Sign In / Out ────────────────────────────────────────────────────────
-
-  Future<void> _signInWithGoogle() async {
+  Future<void> _createLocalBackup() async {
+    setState(() => _isLocalActionRunning = true);
     try {
-      final user = await CloudSyncService.signInWithGoogle();
-      if (mounted) {
-        setState(() => _currentUser = user);
-        if (user != null) {
-          _loadBackupInfo();
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Signed in as ${user.email}'),
-            backgroundColor: Colors.green,
-          ));
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        _showError('Sign-in failed: $e\n\nMake sure you have internet access. If the error says "PlatformException(sign_in_failed)", let your developer know.');
-      }
-    }
-  }
-
-  Future<void> _signOut() async {
-    final confirmed = await _confirm(
-        'Sign Out', 'Sign out from Google? Your local data will not be deleted.');
-    if (!confirmed) return;
-    await CloudSyncService.signOut();
-    if (mounted) setState(() { _currentUser = null; _backupInfo = null; });
-  }
-
-  // ─── Backup ───────────────────────────────────────────────────────────────
-
-  Future<void> _backup() async {
-    final settings = ref.read(settingsProvider);
-    setState(() => _isBacking = true);
-    try {
-      final result = await CloudSyncService.backupToCloud(settings);
+      final msg = await LocalBackupService.createLocalBackup();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(result.message),
-        backgroundColor: result.success ? Colors.green : Colors.red,
+        content: Text(msg),
+        backgroundColor: AppTheme.profitGreen,
         duration: const Duration(seconds: 4),
       ));
-      if (result.success) _loadBackupInfo();
     } finally {
-      if (mounted) setState(() => _isBacking = false);
+      if (mounted) setState(() => _isLocalActionRunning = false);
     }
   }
 
-  // ─── Restore ──────────────────────────────────────────────────────────────
-
-  Future<void> _restore() async {
+  Future<void> _restoreLocalBackup() async {
     final confirmed = await _confirm(
-      'Restore from Cloud',
-      'This will replace ALL products, categories, and sales history on this phone with your cloud backup.\n\nContinue?',
+      'Restore Local Backup',
+      'This will replace your current local database with the selected backup file.\n\nContinue?',
     );
     if (!confirmed) return;
 
-    setState(() => _isRestoring = true);
+    setState(() => _isLocalActionRunning = true);
     try {
-      final result = await CloudSyncService.restoreFromCloud();
+      final msg = await LocalBackupService.restoreLocalBackup();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(result.message),
-        backgroundColor: result.success ? Colors.green : Colors.red,
+        content: Text(msg),
+        backgroundColor: msg.contains('Successfully') ? AppTheme.profitGreen : AppTheme.lossRed,
         duration: const Duration(seconds: 4),
       ));
-      if (result.success) {
-        // Reload all state so UI updates instantly across all tabs
-        await ref.read(settingsProvider.notifier).loadSettings();
-        await ref.read(inventoryProvider.notifier).loadProducts();
-        ref.invalidate(categoriesProvider);
-        ref.invalidate(reportDataProvider);
-        await _loadBackupInfo();
+      if (msg.contains('Successfully')) {
+        await _reloadAllProviders();
       }
     } finally {
-      if (mounted) setState(() => _isRestoring = false);
+      if (mounted) setState(() => _isLocalActionRunning = false);
     }
+  }
+
+  // ─── CSV Import & Export ──────────────────────────────────────────────────
+
+  Future<void> _exportProductsCsv() async {
+    final err = await CsvExportService.exportProductsToCsv();
+    if (err != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(err),
+        backgroundColor: AppTheme.lossRed,
+      ));
+    }
+  }
+
+  Future<void> _exportSalesCsv() async {
+    final err = await CsvExportService.exportTransactionsToCsv();
+    if (err != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(err),
+        backgroundColor: AppTheme.lossRed,
+      ));
+    }
+  }
+
+  Future<void> _importProductsCsv() async {
+    final msg = await CsvExportService.importProductsFromCsv();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: msg.contains('Successfully') ? AppTheme.profitGreen : AppTheme.lossRed,
+      duration: const Duration(seconds: 4),
+    ));
+    if (msg.contains('Successfully')) {
+      await ref.read(inventoryProvider.notifier).loadProducts();
+      ref.invalidate(categoriesProvider);
+    }
+  }
+
+  Future<void> _reloadAllProviders() async {
+    await ref.read(settingsProvider.notifier).loadSettings();
+    await ref.read(inventoryProvider.notifier).loadProducts();
+    ref.invalidate(categoriesProvider);
+    ref.invalidate(reportDataProvider);
   }
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -133,34 +123,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return result ?? false;
   }
 
-  void _showError(String msg) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Error'),
-        content: Text(msg),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('OK'))
-        ],
-      ),
-    );
-  }
-
-  String _formatBackupDate(DateTime? dt) {
-    if (dt == null) return 'Never';
-    final local = dt.toLocal();
-    final months = [
-      'Jan','Feb','Mar','Apr','May','Jun',
-      'Jul','Aug','Sep','Oct','Nov','Dec'
-    ];
-    final h = local.hour % 12 == 0 ? 12 : local.hour % 12;
-    final m = local.minute.toString().padLeft(2, '0');
-    final ampm = local.hour < 12 ? 'AM' : 'PM';
-    return '${months[local.month - 1]} ${local.day}, ${local.year}  $h:$m $ampm';
-  }
-
   // ─── Build ────────────────────────────────────────────────────────────────
 
   @override
@@ -168,11 +130,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final settings = ref.watch(settingsProvider);
     final notifier = ref.read(settingsProvider.notifier);
     final colorScheme = Theme.of(context).colorScheme;
-    final isSignedIn = _currentUser != null;
 
     return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       children: [
+
+
         // ── Store Profile ──────────────────────────────────────────────────
         _SectionHeader(title: 'Store Profile'),
         ListTile(
@@ -202,6 +165,53 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         const Divider(),
 
+        // ── Backup & Restore ──────────────────────────────────────────────
+        _SectionHeader(title: 'Backup & Restore'),
+        ListTile(
+          leading: Icon(Icons.sd_storage_outlined, color: colorScheme.primary),
+          title: const Text('Export Local Backup'),
+          subtitle: const Text('Save a complete database snapshot to device files'),
+          trailing: _isLocalActionRunning
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.chevron_right),
+          onTap: _isLocalActionRunning ? null : _createLocalBackup,
+        ),
+        ListTile(
+          leading: Icon(Icons.restore_outlined, color: colorScheme.primary),
+          title: const Text('Restore Local Backup'),
+          subtitle: const Text('Restore database from a local snapshot file'),
+          trailing: _isLocalActionRunning
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.chevron_right),
+          onTap: _isLocalActionRunning ? null : _restoreLocalBackup,
+        ),
+        const Divider(),
+
+        // ── CSV Import & Export ───────────────────────────────────────────
+        _SectionHeader(title: 'CSV Import & Export'),
+        ListTile(
+          leading: Icon(Icons.file_upload_outlined, color: colorScheme.primary),
+          title: const Text('Import Products (CSV)'),
+          subtitle: const Text('Bulk import products from CSV file'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: _importProductsCsv,
+        ),
+        ListTile(
+          leading: Icon(Icons.table_chart_outlined, color: colorScheme.primary),
+          title: const Text('Export Products Catalog (CSV)'),
+          subtitle: const Text('Download all products to CSV format'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: _exportProductsCsv,
+        ),
+        ListTile(
+          leading: Icon(Icons.receipt_long_outlined, color: colorScheme.primary),
+          title: const Text('Export Sales History (CSV)'),
+          subtitle: const Text('Download sales transactions to CSV format'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: _exportSalesCsv,
+        ),
+        const Divider(),
+
         // ── Security ──────────────────────────────────────────────────────
         _SectionHeader(title: 'Security'),
         ListTile(
@@ -214,167 +224,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         const Divider(),
 
-        // ── Cloud Backup ──────────────────────────────────────────────────
-        _SectionHeader(title: 'Cloud Backup (Google)'),
 
-        // Google account tile
-        if (!isSignedIn)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundColor: colorScheme.primaryContainer,
-                      child: Icon(Icons.account_circle_outlined,
-                          color: colorScheme.primary),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Sign in with Google',
-                              style:
-                                  TextStyle(fontWeight: FontWeight.w500)),
-                          Text(
-                            'Required to backup & restore your store data',
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: colorScheme.onSurfaceVariant),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _signInWithGoogle,
-                    icon: const Icon(Icons.login, size: 18),
-                    label: const Text('Sign In with Google'),
-                  ),
-                ),
-              ],
-            ),
-          )
-
-        else ...[
-          // Signed-in account info
-          ListTile(
-            leading: CircleAvatar(
-              backgroundImage: _currentUser?.photoURL != null
-                  ? NetworkImage(_currentUser!.photoURL!)
-                  : null,
-              backgroundColor: colorScheme.primaryContainer,
-              child: _currentUser?.photoURL == null
-                  ? Text(
-                      (_currentUser?.displayName ?? 'G')[0].toUpperCase(),
-                      style: TextStyle(color: colorScheme.primary),
-                    )
-                  : null,
-            ),
-            title: Text(_currentUser?.displayName ?? 'Google Account'),
-            subtitle: Text(_currentUser?.email ?? ''),
-            trailing: TextButton(
-              onPressed: _signOut,
-              child: const Text('Sign Out',
-                  style: TextStyle(color: Colors.red)),
-            ),
-          ),
-
-          // Last backup info
-          Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.cloud_done_outlined,
-                      size: 20, color: colorScheme.primary),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Last backup: ${_formatBackupDate(_backupInfo?.backedUpAt)}',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        if (_backupInfo != null)
-                          Text(
-                            '${_backupInfo!.productCount} products · ${_backupInfo!.categoryCount} categories · ${_backupInfo!.transactionCount} sales',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(color: colorScheme.outline),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Backup & Restore buttons
-          Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: _isBacking ? null : _backup,
-                    icon: _isBacking
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child:
-                                CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Icon(Icons.cloud_upload_outlined),
-                    label: Text(_isBacking ? 'Backing up…' : 'Backup Now'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _isRestoring ? null : _restore,
-                    icon: _isRestoring
-                        ? SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: colorScheme.primary))
-                        : const Icon(Icons.cloud_download_outlined),
-                    label:
-                        Text(_isRestoring ? 'Restoring…' : 'Restore'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-
-        const Divider(),
 
         // ── About ─────────────────────────────────────────────────────────
         _SectionHeader(title: 'About'),
         const ListTile(
           leading: Icon(Icons.info_outline),
-          title: Text('SariSmart'),
-          subtitle: Text('Version 1.0.0 (MVP)'),
+          title: Text('Kita POS'),
+          subtitle: Text('Version 1.0.0 (Private & Local-First)'),
+        ),
+        ListTile(
+          leading: Icon(Icons.system_update_outlined, color: colorScheme.primary),
+          title: const Text('Check for Updates'),
+          subtitle: const Text('You are using the latest version (v1.0.0)'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Kita POS is up to date! (Version 1.0.0)'),
+                backgroundColor: AppTheme.profitGreen,
+              ),
+            );
+          },
         ),
       ],
     );
@@ -465,7 +336,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('PIN removed'),
-                        backgroundColor: Colors.green,
+                        backgroundColor: AppTheme.profitGreen,
                       ),
                     );
                   },
@@ -490,7 +361,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('PIN saved!'),
-                    backgroundColor: Colors.green,
+                    backgroundColor: AppTheme.profitGreen,
                   ),
                 );
               }
@@ -515,7 +386,7 @@ class _SectionHeader extends StatelessWidget {
         title.toUpperCase(),
         style: TextStyle(
           fontSize: 12,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
           letterSpacing: 1.2,
           color: Theme.of(context).colorScheme.primary,
         ),
@@ -523,4 +394,5 @@ class _SectionHeader extends StatelessWidget {
     );
   }
 }
+
 
