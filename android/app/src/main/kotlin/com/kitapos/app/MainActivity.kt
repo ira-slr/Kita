@@ -1,4 +1,4 @@
-package com.sarismart.sari_sari_pos
+package com.kitapos.app
 
 import io.flutter.embedding.android.FlutterActivity
 

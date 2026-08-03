@@ -170,7 +170,7 @@ class _AppShellState extends ConsumerState<AppShell>
               title: Text(
                 _currentIndex == 0
                     ? (settings.storeName.isEmpty
-                        ? 'SariSmart'
+                        ? 'Kita POS'
                         : settings.storeName)
                     : _titles[_currentIndex],
               ),

@@ -1,26 +1,44 @@
 {
   "project_info": {
-    "project_number": "34663259699",
-    "project_id": "sari-57991",
-    "storage_bucket": "sari-57991.firebasestorage.app"
+    "project_number": "424917420123",
+    "project_id": "kita-i0826",
+    "storage_bucket": "kita-i0826.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:34663259699:android:b81e39c10b60f1a7e18d46",
+        "mobilesdk_app_id": "1:424917420123:android:38299bf00f9c1e33f1577e",
         "android_client_info": {
-          "package_name": "com.sarismart.sari_sari_pos"
+          "package_name": "com.kitapos.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "424917420123-v19f6tuckk78gglvbuott0ftlabs0ma9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kitapos.app",
+            "certificate_hash": "2ed0705f292cf89461896c7ba735980419120359"
+          }
+        },
+        {
+          "client_id": "424917420123-u99dlh3gjih7k19vug7t4inh0nh847ml.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyA9cDyIJJO1LCyv8SpKCaFIZzBnlVzAQHE"
+          "current_key": "AIzaSyBUalnvkwuSH288ao6kq5-LpTCwI63T9pw"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "424917420123-u99dlh3gjih7k19vug7t4inh0nh847ml.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

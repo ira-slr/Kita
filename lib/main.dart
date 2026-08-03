@@ -44,22 +44,22 @@ void main() async {
 
   runApp(
     ProviderScope(
-      child: SariSmartApp(hasOnboarded: hasOnboarded),
+      child: KitaApp(hasOnboarded: hasOnboarded),
     ),
   );
 }
 
-class SariSmartApp extends ConsumerWidget {
+class KitaApp extends ConsumerWidget {
   final bool hasOnboarded;
 
-  const SariSmartApp({super.key, required this.hasOnboarded});
+  const KitaApp({super.key, required this.hasOnboarded});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
 
     return MaterialApp(
-      title: 'SariSmart',
+      title: 'Kita POS',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,

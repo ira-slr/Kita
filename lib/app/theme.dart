@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// SariSmart app theme with Material 3, custom color palette,
+/// Kita POS app theme with Material 3, custom color palette,
 /// large touch targets, and Google Fonts (Inter).
 class AppTheme {
   // Brand Colors

@@ -50,20 +50,19 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBgKCbII-kkZcQh0rMaoT3iPnNXIdLOlnw',
-    appId: '1:34663259699:web:71c8267d6cf6f735e18d46',
-    messagingSenderId: '34663259699',
-    projectId: 'sari-57991',
-    authDomain: 'sari-57991.firebaseapp.com',
-    storageBucket: 'sari-57991.firebasestorage.app',
-    measurementId: 'G-K2YZ0VR648',
+    apiKey: 'AIzaSyBUalnvkwuSH288ao6kq5-LpTCwI63T9pw',
+    appId: '1:424917420123:web:38299bf00f9c1e33f1577e',
+    messagingSenderId: '424917420123',
+    projectId: 'kita-i0826',
+    authDomain: 'kita-i0826.firebaseapp.com',
+    storageBucket: 'kita-i0826.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyA9cDyIJJO1LCyv8SpKCaFIZzBnlVzAQHE',
-    appId: '1:34663259699:android:b81e39c10b60f1a7e18d46',
-    messagingSenderId: '34663259699',
-    projectId: 'sari-57991',
-    storageBucket: 'sari-57991.firebasestorage.app',
+    apiKey: 'AIzaSyBUalnvkwuSH288ao6kq5-LpTCwI63T9pw',
+    appId: '1:424917420123:android:38299bf00f9c1e33f1577e',
+    messagingSenderId: '424917420123',
+    projectId: 'kita-i0826',
+    storageBucket: 'kita-i0826.firebasestorage.app',
   );
 }

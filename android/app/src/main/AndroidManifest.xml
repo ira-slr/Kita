@@ -8,7 +8,7 @@
     <!-- Vibration for notifications -->
     <uses-permission android:name="android.permission.VIBRATE"/>
     <application
-        android:label="sari_sari_pos"
+        android:label="Kita"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
