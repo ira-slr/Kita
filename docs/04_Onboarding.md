@@ -8,27 +8,39 @@ The target demographic (sari-sari store owners) may not be highly tech-savvy. Th
 *   **Visual Storytelling:** Use culturally relevant, localized illustrations (e.g., a hand holding a phone over a typical Philippine grocery receipt) rather than abstract corporate graphics.
 *   **Generous Hit Targets:** Buttons must be large (minimum 48x48 dp), high-contrast, and placed at the bottom of the screen for easy one-handed reachability.
 
-## 4.2 Screen 1: The Value Proposition Carousel
+## 4.2 First-Open Narrative & Brand Story
+When **Nanay** (the store owner) opens **Kita** for the very first time on her phone, she is greeted by a warm, friendly, and non-intimidating welcome experience. Instead of complex technical jargon or accounting terms, **Kita** immediately communicates its core purpose: **bringing clarity to her hard work**.
+
+```
+  ┌─────────────────────────────────────────────────────────────┐
+  │                                                             │
+  │                     Welcome to KITA 🛒                       │
+  │             "Kita ang Benta, Kita ang Kita"                 │
+  │                                                             │
+  │    [Slide 1]            [Slide 2]            [Slide 3]      │
+  │   Ditch Blind          Real Profit         100% Free &      │
+  │    Listing             Visibility           Offline         │
+  │                                                             │
+  └─────────────────────────────────────────────────────────────┘
+```
+
+## 4.3 Screen 1: The Value Proposition Carousel
 *   **Trigger:** Immediate upon opening the app for the very first time after installation.
-*   **Visual Elements:**
-    *   **Carousel Indicator:** A row of three small dots at the bottom of the screen indicating pagination.
-    *   **Animation:** A smooth, 300ms ease-in-out slide transition between pages. Lottie animations are used for the main graphics to keep the app size small while providing delightful motion.
-    *   **Skip Button:** A "Skip" text button in the top right corner. Tapping this jumps the user directly to the Permission Request Flow (Screen 2).
-*   **Slide 1: No More Notebooks**
-    *   *Illustration:* An animated notebook with crossed-out lines transforming into a neat, digital list on a smartphone.
-    *   *Heading (H1):* "Ditch the Notebook"
-    *   *Subtext (Body):* "Manage your sari-sari store inventory instantly without writing a single line."
-    *   *Button:* "Next" (Primary color, bottom right).
-*   **Slide 2: Scan to Restock**
-    *   *Illustration:* An animation showing a camera lens focusing on a crumpled receipt, with products popping out of the receipt into virtual boxes.
-    *   *Heading (H1):* "Just Scan Your Receipt"
-    *   *Subtext (Body):* "Our smart AI reads your supplier receipts and updates your stock automatically."
-    *   *Button:* "Next" (Primary color, bottom right).
-*   **Slide 3: Works Without Internet**
-    *   *Illustration:* A Wi-Fi symbol with a slash through it, alongside a thriving digital storefront.
-    *   *Heading (H1):* "100% Offline First"
-    *   *Subtext (Body):* "No load? No problem. SariSmart works flawlessly even without an internet connection."
-    *   *Button:* "Get Started" (Full-width, primary color, bottom center).
+*   **Slide 1: Huwag nang Manghula sa Notebook (Ditch Blind Listing)**
+    *   *Illustration:* A worn-out paper ledger transforming into a clean, digital product list on a mobile screen.
+    *   *Heading (H1):* "Huwag nang manghula sa notebook"
+    *   *Subtext (Body):* "Wala nang nawawalang listahan. I-manage ang paninda at panukli nang mabilis at sigurado."
+    *   *Button:* "Next" (Primary color).
+*   **Slide 2: Kitang-Kita ang Benta at Kita (Real Profit Visibility)**
+    *   *Illustration:* A glowing chart showing daily sales and green profit cards.
+    *   *Heading (H1):* "Kitang-kita ang totoong kita"
+    *   *Subtext (Body):* "Alamin agad ang benta at tubo araw-araw nang walang kumplikadong accounting."
+    *   *Button:* "Next" (Primary color).
+*   **Slide 3: Libre at Gana Kahit Walang Load (100% Free & Offline)**
+    *   *Illustration:* A Wi-Fi icon with a checkmark and a ₱0 free badge.
+    *   *Heading (H1):* "100% Libre at Offline First"
+    *   *Subtext (Body):* "Walang monthly fee at gagana kahit walang internet data. Data mo ay ligtas sa iyong telepono."
+    *   *Button:* "Magsimula Na!" (Get Started - Primary full-width button).
 
 ## 4.3 Screen 2: Mandatory Permissions Request
 *   **Trigger:** Tapping "Get Started" on the carousel, or "Skip".

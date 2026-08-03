@@ -17,12 +17,20 @@ The current methods and alternative technological solutions fail to address the 
 * **Unintuitive Interfaces:** Existing solutions use complex retail jargon (e.g., SKUs, COGS, FIFO) that alienates non-technical users.
 * **Lack of Analytics:** Without accurate data, store owners cannot identify trends, seasonal demands, or their actual daily profit, making business expansion a guessing game.
 
-## 1.4 Proposed Solution
-**SariSmart** is a mobile-first, offline-first AI-powered Point-of-Sale and Inventory Management System specifically engineered for sari-sari stores. 
+## 1.4 Proposed Solution: Kita POS ("Kita")
+**Kita** is a mobile-first, offline-first Point-of-Sale (POS) and Inventory Management System specifically engineered for sari-sari stores.
 
-SariSmart eliminates the friction of traditional data entry by leveraging on-device Artificial Intelligence (AI) and Optical Character Recognition (OCR). Instead of manually encoding products, a store owner simply takes a picture of their supplier's physical receipt. The application instantly reads the receipt, extracts the product names, quantities, and prices, and updates the inventory automatically. 
+### 💡 The Story & Meaning Behind "Kita"
+The name **"Kita"** was chosen with deep intention and heart to solve a fundamental problem in sari-sari store management: **moving away from blind paper listing toward true financial visibility**. In Tagalog, "Kita" carries a powerful dual meaning:
+1. **Kita (Earnings & Profits):** Real financial clarity so store owners know exactly how much net profit they earn every single day.
+2. **Kita (Visibility & Seeing Clearly):** Full visual clarity (*kitang-kita*) over stock levels, product sales, and cash change calculations without relying on manual pen-and-paper guesswork.
 
-All core operations—scanning receipts, tracking sales, updating inventory, and viewing reports—are processed locally on the device, ensuring 100% offline functionality. Cloud connectivity is entirely optional, used only for data backup and advanced analytics when an internet connection becomes available. 
+> **Brand Tagline:** *"Kita: Kita ang Benta, Kita ang Kita."*  
+> *(Clear visibility into your sales, clear visibility into your profits.)*
+
+Kita eliminates the friction of traditional data entry by leveraging fast target-framed barcode scanning, instant cash/change computation, offline SQLite data storage, and automated GitHub release checking—**100% free of charge without subscription or Google Play costs**.
+
+All core operations—scanning barcodes, recording sales, updating inventory, and viewing profit analytics—are processed locally on the device, ensuring 100% offline functionality. Cloud connectivity is entirely optional, used only for data backup and restoration when internet access is available. 
 
 ## 1.5 Objectives
 * **Eliminate Manual Data Entry:** Reduce the time it takes to restock inventory from hours to seconds using AI-powered receipt scanning.

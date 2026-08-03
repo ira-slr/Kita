@@ -31,6 +31,7 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+/android/build/
 /coverage/
 
 # Symbolication related
@@ -43,3 +44,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Personal Documentation & Prompts (Ignored from Git)
+docs/21_Project_Charter_and_Plan.md
+docs/22_Test_Cases.md
+docs/23_Removing_Web_Support_Configuration.md
