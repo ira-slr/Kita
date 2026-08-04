@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'settings_provider.dart';
 import '../inventory/inventory_provider.dart';
 import '../reports/reports_provider.dart';
@@ -228,22 +229,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
         // ── About ─────────────────────────────────────────────────────────
         _SectionHeader(title: 'About'),
-        const ListTile(
-          leading: Icon(Icons.info_outline),
-          title: Text('Kita POS'),
-          subtitle: Text('Version 1.0.0 (Private & Local-First)'),
-        ),
-        ListTile(
-          leading: Icon(Icons.system_update_outlined, color: colorScheme.primary),
-          title: const Text('Check for Updates'),
-          subtitle: const Text('You are using the latest version (v1.0.0)'),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Kita POS is up to date! (Version 1.0.0)'),
-                backgroundColor: AppTheme.profitGreen,
-              ),
+        FutureBuilder<PackageInfo>(
+          future: PackageInfo.fromPlatform(),
+          builder: (context, snapshot) {
+            final version = snapshot.data?.version ?? '1.1.0';
+            final build = snapshot.data?.buildNumber ?? '2';
+            return Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.info_outline),
+                  title: const Text('Kita POS'),
+                  subtitle: Text('Version $version+$build (Private & Local-First)'),
+                ),
+                ListTile(
+                  leading: Icon(Icons.system_update_outlined, color: colorScheme.primary),
+                  title: const Text('Check for Updates'),
+                  subtitle: Text('You are using the latest version (v$version)'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Kita POS is up to date! (v$version+$build)'),
+                        backgroundColor: AppTheme.profitGreen,
+                      ),
+                    );
+                  },
+                ),
+              ],
             );
           },
         ),
