@@ -6,6 +6,7 @@ import '../inventory/inventory_provider.dart';
 import '../reports/reports_provider.dart';
 import '../../core/services/local_backup_service.dart';
 import '../../core/services/csv_export_service.dart';
+import '../../core/services/update_service.dart';
 import '../../app/theme.dart';
 
 /// Settings screen: store profile, dark mode, PIN, local backup & CSV, cloud backup.
@@ -244,16 +245,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ListTile(
                   leading: Icon(Icons.system_update_outlined, color: colorScheme.primary),
                   title: const Text('Check for Updates'),
-                  subtitle: Text('You are using the latest version (v$version)'),
+                  subtitle: Text('Current version: v$version+$build'),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Kita POS is up to date! (v$version+$build)'),
-                        backgroundColor: AppTheme.profitGreen,
-                      ),
-                    );
-                  },
+                  onTap: () => _handleCheckForUpdates(context, version, build),
                 ),
               ],
             );
@@ -383,6 +377,56 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _handleCheckForUpdates(
+      BuildContext context, String currentVersion, String buildNumber) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text('Checking GitHub for updates...'),
+          ],
+        ),
+      ),
+    );
+
+    final result = await UpdateService.checkForUpdates(currentVersion);
+
+    if (context.mounted) {
+      Navigator.of(context).pop(); // Close loading dialog
+
+      if (result.isUpdateAvailable) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            icon: const Icon(Icons.system_update_rounded,
+                color: AppTheme.profitGreen, size: 44),
+            title: const Text('🎉 New Update Available!'),
+            content: Text(
+              'A newer version of Kita POS (v${result.latestVersion}) has been published on GitHub!\n\nYou are currently on v$currentVersion+$buildNumber.',
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Awesome!'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Kita POS is up to date! (v$currentVersion+$buildNumber)'),
+            backgroundColor: AppTheme.profitGreen,
+          ),
+        );
+      }
+    }
   }
 }
 
