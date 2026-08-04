@@ -15,6 +15,8 @@ import 'features/settings/settings_provider.dart';
 import 'core/models/product.dart';
 
 
+import 'features/security/pin_lock_screen.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -49,14 +51,22 @@ void main() async {
   );
 }
 
-class KitaApp extends ConsumerWidget {
+class KitaApp extends ConsumerStatefulWidget {
   final bool hasOnboarded;
 
   const KitaApp({super.key, required this.hasOnboarded});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<KitaApp> createState() => _KitaAppState();
+}
+
+class _KitaAppState extends ConsumerState<KitaApp> {
+  bool _isPinUnlocked = false;
+
+  @override
+  Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
+    final isPinRequired = widget.hasOnboarded && settings.pin != null && !_isPinUnlocked;
 
     return MaterialApp(
       title: 'Kita POS',
@@ -64,7 +74,13 @@ class KitaApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: settings.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-      initialRoute: hasOnboarded ? '/home' : '/onboarding',
+      home: !widget.hasOnboarded
+          ? const OnboardingScreen()
+          : isPinRequired
+              ? PinLockScreen(
+                  onUnlocked: () => setState(() => _isPinUnlocked = true),
+                )
+              : const AppShell(),
       onGenerateRoute: (routeSettings) {
         switch (routeSettings.name) {
           case '/onboarding':
@@ -73,7 +89,11 @@ class KitaApp extends ConsumerWidget {
             );
           case '/home':
             return MaterialPageRoute(
-              builder: (_) => const AppShell(),
+              builder: (_) => isPinRequired
+                  ? PinLockScreen(
+                      onUnlocked: () => setState(() => _isPinUnlocked = true),
+                    )
+                  : const AppShell(),
             );
           case '/inventory/add':
           case '/inventory/edit':
