@@ -43,7 +43,9 @@ class SettingsNotifier extends StateNotifier<StoreSettings> {
   }
 
   Future<void> setPin(String? pin) async {
-    final updated = state.copyWith(pin: pin);
+    final updated = pin == null || pin.isEmpty
+        ? state.copyWith(clearPin: true)
+        : state.copyWith(pin: pin);
     await updateSettings(updated);
   }
 }

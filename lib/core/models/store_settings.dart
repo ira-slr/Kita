@@ -65,15 +65,17 @@ class StoreSettings {
     bool? isDarkMode,
     String? lastBackupTimestamp,
     String? pin,
+    bool clearPin = false,
+    bool clearOwnerName = false,
   }) {
     return StoreSettings(
       storeName: storeName ?? this.storeName,
-      ownerName: ownerName ?? this.ownerName,
+      ownerName: clearOwnerName ? null : (ownerName ?? this.ownerName),
       currencyCode: currencyCode ?? this.currencyCode,
       languageCode: languageCode ?? this.languageCode,
       isDarkMode: isDarkMode ?? this.isDarkMode,
       lastBackupTimestamp: lastBackupTimestamp ?? this.lastBackupTimestamp,
-      pin: pin ?? this.pin,
+      pin: clearPin ? null : (pin ?? this.pin),
     );
   }
 }
