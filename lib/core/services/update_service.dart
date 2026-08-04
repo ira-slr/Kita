@@ -4,11 +4,13 @@ class UpdateCheckResult {
   final bool isUpdateAvailable;
   final String latestVersion;
   final String currentVersion;
+  final String? error;
 
   UpdateCheckResult({
     required this.isUpdateAvailable,
     required this.latestVersion,
     required this.currentVersion,
+    this.error,
   });
 }
 
@@ -16,34 +18,49 @@ class UpdateService {
   /// Fetches the latest published pubspec.yaml from GitHub main branch
   /// and compares it with the currently installed version.
   static Future<UpdateCheckResult> checkForUpdates(String currentVersion) async {
-    try {
-      final response = await http
-          .get(Uri.parse('https://raw.githubusercontent.com/ira-slr/Kita/main/pubspec.yaml'))
-          .timeout(const Duration(seconds: 5));
+    final urls = [
+      'https://raw.githubusercontent.com/ira-slr/Kita/main/pubspec.yaml',
+      'https://raw.githubusercontent.com/ira-slr/sari-pos/main/pubspec.yaml',
+    ];
 
-      if (response.statusCode == 200) {
-        final content = response.body;
-        final match = RegExp(r'^version:\s*([0-9]+\.[0-9]+\.[0-9]+)', multiLine: true)
-            .firstMatch(content);
+    for (final url in urls) {
+      try {
+        final response = await http
+            .get(Uri.parse(url))
+            .timeout(const Duration(seconds: 5));
 
-        if (match != null) {
-          final latestVersion = match.group(1)!;
-          final isNewer = _isVersionNewer(currentVersion, latestVersion);
+        if (response.statusCode == 200) {
+          final content = response.body;
+          final match = RegExp(r'^version:\s*([0-9]+\.[0-9]+\.[0-9]+)', multiLine: true)
+              .firstMatch(content);
+
+          if (match != null) {
+            final latestVersion = match.group(1)!;
+            final isNewer = _isVersionNewer(currentVersion, latestVersion);
+            return UpdateCheckResult(
+              isUpdateAvailable: isNewer,
+              latestVersion: latestVersion,
+              currentVersion: currentVersion,
+            );
+          }
+        } else if (response.statusCode == 404) {
           return UpdateCheckResult(
-            isUpdateAvailable: isNewer,
-            latestVersion: latestVersion,
+            isUpdateAvailable: false,
+            latestVersion: currentVersion,
             currentVersion: currentVersion,
+            error: 'Repository is private on GitHub (404 Not Found). Unauthenticated update checks require a public repo.',
           );
         }
+      } catch (e) {
+        // Network timeout or offline
       }
-    } catch (e) {
-      // Graceful fallback on offline/timeout
     }
 
     return UpdateCheckResult(
       isUpdateAvailable: false,
       latestVersion: currentVersion,
       currentVersion: currentVersion,
+      error: 'Unable to connect to GitHub. Please check your internet connection.',
     );
   }
 

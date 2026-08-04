@@ -400,7 +400,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (context.mounted) {
       Navigator.of(context).pop(); // Close loading dialog
 
-      if (result.isUpdateAvailable) {
+      if (result.error != null) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            icon: const Icon(Icons.lock_outline_rounded,
+                color: Colors.amber, size: 44),
+            title: const Text('Update Check Notice'),
+            content: Text(result.error!),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      } else if (result.isUpdateAvailable) {
         showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
