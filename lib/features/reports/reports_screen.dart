@@ -104,43 +104,25 @@ class _OverviewTab extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(0, 12, 0, 24),
         children: [
-          // Time filter chips & Refresh button
+          // Time filter chips
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 44,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: ReportPeriod.values.map((p) {
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ChoiceChip(
-                            label: Text(_periodLabel(p)),
-                            selected: period == p,
-                            onSelected: (_) =>
-                                ref.read(reportPeriodProvider.notifier).state = p,
-                          ),
-                        );
-                      }).toList(),
+            child: SizedBox(
+              height: 44,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: ReportPeriod.values.map((p) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(_periodLabel(p)),
+                      selected: period == p,
+                      onSelected: (_) =>
+                          ref.read(reportPeriodProvider.notifier).state = p,
                     ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                IconButton.filledTonal(
-                  onPressed: () {
-                    ref.invalidate(reportDataProvider);
-                    ref.invalidate(recentTransactionsProvider);
-                    ref.invalidate(inventoryProvider);
-                    ref.invalidate(todaySalesProvider);
-                    ref.invalidate(todayProfitProvider);
-                  },
-                  icon: const Icon(Icons.refresh_rounded),
-                  tooltip: 'Refresh Financial Overview',
-                ),
-              ],
+                  );
+                }).toList(),
+              ),
             ),
           ),
 
@@ -181,14 +163,14 @@ class _OverviewTab extends ConsumerWidget {
                 child: Row(
                   children: [
                     _SummaryCard(
-                      title: 'Expenses (COGS)',
+                      title: 'Total Expenses',
                       value: Formatters.currency(data.totalCost, symbol: symbol),
                       icon: Icons.shopping_cart_outlined,
                       color: Colors.orange,
                     ),
                     const SizedBox(width: 12),
                     _SummaryCard(
-                      title: 'Completed Txns',
+                      title: 'Completed Transactions',
                       value: '${data.transactionCount}',
                       icon: Icons.receipt_long,
                       color: Colors.purple,
@@ -856,18 +838,23 @@ class _SummaryCard extends StatelessWidget {
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: color,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
               ),
             ),
           ],
